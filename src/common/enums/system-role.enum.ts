@@ -1,0 +1,6 @@
+export enum SystemRole {
+  STUDENT = 'STUDENT',
+  LECTURER = 'LECTURER',
+  HEAD_OF_DEPARTMENT = 'HEAD_OF_DEPARTMENT',
+  ADMIN = 'ADMIN',
+}

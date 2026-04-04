@@ -1,0 +1,1 @@
+export const SHEET_REPOSITORY = Symbol('SHEET_REPOSITORY');
