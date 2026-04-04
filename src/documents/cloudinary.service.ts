@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import { v2 as cloudinary, UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
 import { extname } from 'node:path';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { AppException } from '../common/exceptions/app.exception';
@@ -30,8 +30,14 @@ export class CloudinaryService {
     folder: string,
   ): Promise<UploadApiResponse> {
     if (!this.isConfigured) {
+      console.error('Cloudinary is not configured', {
+        hasCloudName: Boolean(process.env.CLOUDINARY_CLOUD_NAME),
+        hasApiKey: Boolean(process.env.CLOUDINARY_API_KEY),
+        hasApiSecret: Boolean(process.env.CLOUDINARY_API_SECRET),
+      });
+
       throw new AppException(
-        'Cloudinary chưa được cấu hình',
+        'Cloudinary chua duoc cau hinh',
         HttpStatus.INTERNAL_SERVER_ERROR,
         ErrorCode.DOCUMENT_NOT_ALLOWED,
       );
@@ -50,15 +56,32 @@ export class CloudinaryService {
         },
         (error, result) => {
           if (error || !result) {
+            const cloudinaryError = error as UploadApiErrorResponse | undefined;
+            const upstreamMessage =
+              typeof cloudinaryError?.message === 'string'
+                ? cloudinaryError.message
+                : 'Khong nhan duoc phan hoi hop le tu Cloudinary';
+
+            console.error('Cloudinary upload failed', {
+              message: upstreamMessage,
+              httpCode: cloudinaryError?.http_code ?? null,
+              name: cloudinaryError?.name ?? null,
+              folder,
+              originalName: file.originalname,
+              mimetype: file.mimetype,
+              size: file.size,
+            });
+
             reject(
               new AppException(
-                'Upload Cloudinary thất bại',
+                `Upload Cloudinary that bai: ${upstreamMessage}`,
                 HttpStatus.BAD_GATEWAY,
                 ErrorCode.DOCUMENT_NOT_ALLOWED,
               ),
             );
             return;
           }
+
           resolve(result);
         },
       );
