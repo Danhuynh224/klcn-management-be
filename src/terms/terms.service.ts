@@ -16,12 +16,22 @@ export class TermsService {
     private readonly repository: SheetRepository,
   ) {}
 
-  async findAll(loai?: string, isActive?: string) {
+  async findAll(loai?: string, major?: string, isActive?: string) {
     const terms = await this.repository.getAllRows<TermRow>(SheetName.TERMS);
 
     return {
       data: terms.filter((term) => {
-        if (loai && String(term.loai) !== loai) {
+        if (
+          loai &&
+          this.normalizeText(String(term.loai)) !== this.normalizeText(loai)
+        ) {
+          return false;
+        }
+
+        if (
+          major &&
+          this.normalizeText(String(term.major)) !== this.normalizeText(major)
+        ) {
           return false;
         }
 
@@ -71,5 +81,16 @@ export class TermsService {
         payload,
       ),
     };
+  }
+
+  private normalizeText(value: string | null | undefined): string {
+    return (value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
   }
 }

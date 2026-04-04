@@ -5,6 +5,8 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../common/types/authenticated-user.type';
 import { FieldsService } from './fields.service';
 
 @ApiTags('Fields')
@@ -12,6 +14,12 @@ import { FieldsService } from './fields.service';
 @Controller('fields')
 export class FieldsController {
   constructor(private readonly fieldsService: FieldsService) {}
+
+  @ApiOperation({ summary: 'List field names by current user major' })
+  @Get('me')
+  getByCurrentUserMajor(@CurrentUser() user: AuthenticatedUser) {
+    return this.fieldsService.findByUserMajor(user);
+  }
 
   @ApiOperation({ summary: 'List lecturer fields' })
   @ApiQuery({ name: 'emailGV', required: false })

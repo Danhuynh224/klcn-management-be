@@ -123,7 +123,7 @@ export class CommitteesService {
       RegistrationStatus.DEFENSE_SCHEDULED,
       committee.chairEmail,
       'HEAD_OF_DEPARTMENT',
-      `Phan vao hoi dong ${committee.committeeName}`,
+      `Phân vào hội đồng ${committee.committeeName}`,
     );
 
     await this.notificationsService.createMany(

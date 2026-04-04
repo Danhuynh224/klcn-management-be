@@ -88,7 +88,7 @@ export class RegistrationsService {
       registration.status,
       user.email,
       user.role,
-      'Sinh vien tao dang ky BCTT',
+      'Sinh viên tạo đăng ký BCTT',
     );
     await this.incrementQuota(payload.emailGVHD, payload.dot, 1);
     await this.notificationsService.createNotification(
@@ -167,7 +167,7 @@ export class RegistrationsService {
       registration.status,
       user.email,
       user.role,
-      'Sinh vien tao dang ky KLTN',
+      'Sinh viên tạo đăng ký KLTN',
     );
     await this.incrementQuota(supervisorEmail, payload.dot, 1);
     await this.notificationsService.createNotification(
@@ -573,7 +573,7 @@ export class RegistrationsService {
       nextStatus,
       user.email,
       user.role,
-      'GVHD duyet dang ky',
+      'GVHD duyệt đăng ký',
     );
 
     await this.notificationsService.createNotification(
@@ -734,7 +734,7 @@ export class RegistrationsService {
       payload.status,
       user.email,
       user.role,
-      'Cap nhat trang thai registration',
+      'Cập nhật trạng thái đăng ký',
     );
 
     return { data: await this.enrichRegistrationWithWorkflow(updated) };
@@ -866,8 +866,10 @@ export class RegistrationsService {
     }
 
     const nextUsedSlots = Math.max(0, toNumber(quota.usedSlots) + delta);
+    const totalSlots = toNumber(quota.quota);
     await this.repository.updateRow<QuotaRow>(SheetName.QUOTAS, quota.id, {
       usedSlots: nextUsedSlots,
+      quota: totalSlots - 1,
     });
   }
 

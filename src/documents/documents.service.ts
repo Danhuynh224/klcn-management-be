@@ -206,7 +206,7 @@ export class DocumentsService {
         nextStatus,
         user.email,
         user.role,
-        `Upload lecturer document: ${payload.documentType}`,
+        `Đăng tải tài liệu: ${payload.documentType == StudentDocumentType.BCTT_REPORT ? 'Báo cáo thực tập' : payload.documentType == StudentDocumentType.INTERNSHIP_CONFIRMATION ? 'Xác nhận thực tập' : payload.documentType == StudentDocumentType.KLTN_REPORT ? 'Báo cáo khóa luận' : 'Tài liệu khác'}`,
       );
     }
 
@@ -270,7 +270,7 @@ export class DocumentsService {
         nextStatus,
         user.email,
         user.role,
-        `Upload student document: ${payload.documentType}`,
+        `Đăng tải tài liệu: ${payload.documentType == LecturerDocumentType.TURNITIN ? 'Báo cáo Turnitin' : payload.documentType == LecturerDocumentType.COMMITTEE_MINUTES ? 'Biên bản hội đồng' : payload.documentType == LecturerDocumentType.REVIEW_ATTACHMENT ? 'Tài liệu đánh giá' : payload.documentType == LecturerDocumentType.SUPERVISOR_ATTACHMENT ? 'Tài liệu hướng dẫn' : 'Tài liệu khác'}`,
       );
     }
 

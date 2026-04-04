@@ -14,8 +14,10 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { SystemRole } from '../common/enums/system-role.enum';
+import type { AuthenticatedUser } from '../common/types/authenticated-user.type';
 import { CreateTermDto } from './dto/create-term.dto';
 import { UpdateTermDto } from './dto/update-term.dto';
 import { TermsService } from './terms.service';
@@ -28,10 +30,15 @@ export class TermsController {
 
   @ApiOperation({ summary: 'List terms/dots' })
   @ApiQuery({ name: 'loai', required: false })
+  @ApiQuery({ name: 'major', required: false })
   @ApiQuery({ name: 'isActive', required: false })
   @Get()
-  findAll(@Query('loai') loai?: string, @Query('isActive') isActive?: string) {
-    return this.termsService.findAll(loai, isActive);
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('loai') loai?: string,
+    @Query('isActive') isActive?: string,
+  ) {
+    return this.termsService.findAll(loai, user.major, isActive);
   }
 
   @Roles(SystemRole.ADMIN, SystemRole.HEAD_OF_DEPARTMENT)

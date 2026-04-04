@@ -173,7 +173,7 @@ export class ScoresService {
       RegistrationStatus.DEFENDED,
       user.email,
       user.role,
-      'Tong hop diem va chot trang thai da bao ve',
+      'Tổng hợp điểm và chốt trạng thái đã bảo vệ',
     );
 
     return {
@@ -217,7 +217,7 @@ export class ScoresService {
         status,
         changedBy,
         'LECTURER',
-        `Cap nhat sau khi cham diem voi vai tro ${role}`,
+        `Cập nhật sau khi chấm điểm với vai trò ${role}`,
       );
     }
   }
