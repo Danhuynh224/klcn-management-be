@@ -281,6 +281,31 @@ export class DocumentsService {
     registration: RegistrationRow,
     documentType: StudentDocumentType,
   ) {
+    if (
+      [
+        StudentDocumentType.BCTT_REPORT,
+        StudentDocumentType.INTERNSHIP_CONFIRMATION,
+      ].includes(documentType) &&
+      registration.status === RegistrationStatus.BCTT_PENDING_APPROVAL
+    ) {
+      throw new AppException(
+        'Chỉ được upload báo cáo BCTT hoặc xác nhận thực tập khi đã được giáo viên hướng dẫn phê duyệt',
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.DOCUMENT_NOT_ALLOWED,
+      );
+    }
+
+    if (
+      documentType === StudentDocumentType.KLTN_REPORT &&
+      registration.status === RegistrationStatus.KLTN_PENDING_APPROVAL
+    ) {
+      throw new AppException(
+        'Chỉ được upload báo cáo KLTN sau khi registration không còn ở trạng thái chờ duyệt',
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.DOCUMENT_NOT_ALLOWED,
+      );
+    }
+
     const term = await this.repository.findOne<TermRow>(
       SheetName.TERMS,
       (row) => {

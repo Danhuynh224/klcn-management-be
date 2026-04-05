@@ -34,6 +34,13 @@ export class CommitteesController {
     return this.committeesService.findAll(dot);
   }
 
+  @ApiOperation({ summary: 'Get committee by id' })
+  @ApiParam({ name: 'id' })
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.committeesService.findOne(id);
+  }
+
   @Roles(SystemRole.ADMIN, SystemRole.HEAD_OF_DEPARTMENT)
   @ApiOperation({ summary: 'Create a committee' })
   @Post()

@@ -39,13 +39,16 @@ export class UsersController {
   @ApiQuery({ name: 'fieldName', required: false })
   @ApiQuery({ name: 'dot', required: false })
   @ApiQuery({ name: 'availableOnly', required: false, example: 'true' })
+  @Roles(SystemRole.ADMIN, SystemRole.HEAD_OF_DEPARTMENT, SystemRole.LECTURER)
   @Get('lecturers')
   findLecturers(
+    @CurrentUser() user: AuthenticatedUser,
     @Query('fieldName') fieldName?: string,
     @Query('dot') dot?: string,
     @Query('availableOnly') availableOnly?: string,
   ) {
     return this.usersService.findLecturers(
+      user,
       fieldName,
       dot,
       availableOnly === 'true',

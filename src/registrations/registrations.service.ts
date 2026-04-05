@@ -185,18 +185,23 @@ export class RegistrationsService {
   }
 
   async getMine(user: AuthenticatedUser) {
-    const registrations = await this.repository.getAllRows<RegistrationRow>(
-      SheetName.REGISTRATIONS,
-    );
+    const [registrations, studentDocuments, lecturerDocuments] =
+      await Promise.all([
+        this.repository.getAllRows<RegistrationRow>(SheetName.REGISTRATIONS),
+        this.repository.getAllRows<StudentDocumentRow>(
+          SheetName.STUDENT_DOCUMENTS,
+        ),
+        this.repository.getAllRows<LecturerDocumentRow>(
+          SheetName.LECTURER_DOCUMENTS,
+        ),
+      ]);
 
     if (user.role === SystemRole.STUDENT) {
       return {
-        data: await Promise.all(
-          registrations
-            .filter((registration) => registration.emailSV === user.email)
-            .map((registration) =>
-              this.enrichRegistrationWithWorkflow(registration),
-            ),
+        data: await this.enrichRegistrationsWithWorkflow(
+          registrations.filter((registration) => registration.emailSV === user.email),
+          studentDocuments,
+          lecturerDocuments,
         ),
       };
     }
@@ -217,38 +222,41 @@ export class RegistrationsService {
         .map((committee) => committee.id);
 
       return {
-        data: await Promise.all(
-          registrations
-            .filter((registration) => {
-              return (
-                registration.emailGVHD === user.email ||
-                registration.emailGVPB === user.email ||
-                committeeIds.includes(registration.committeeId)
-              );
-            })
-            .map((registration) =>
-              this.enrichRegistrationWithWorkflow(registration),
-            ),
+        data: await this.enrichRegistrationsWithWorkflow(
+          registrations.filter((registration) => {
+            return (
+              registration.emailGVHD === user.email ||
+              registration.emailGVPB === user.email ||
+              committeeIds.includes(registration.committeeId)
+            );
+          }),
+          studentDocuments,
+          lecturerDocuments,
         ),
       };
     }
 
     return {
-      data: await Promise.all(
-        registrations.map((registration) =>
-          this.enrichRegistrationWithWorkflow(registration),
-        ),
+      data: await this.enrichRegistrationsWithWorkflow(
+        registrations,
+        studentDocuments,
+        lecturerDocuments,
       ),
     };
   }
 
   async findAll(user: AuthenticatedUser, query: QueryRegistrationsDto) {
-    const registrations = await this.repository.getAllRows<RegistrationRow>(
-      SheetName.REGISTRATIONS,
-    );
-    const committees = await this.repository.getAllRows<CommitteeRow>(
-      SheetName.COMMITTEES,
-    );
+    const [registrations, committees, studentDocuments, lecturerDocuments] =
+      await Promise.all([
+        this.repository.getAllRows<RegistrationRow>(SheetName.REGISTRATIONS),
+        this.repository.getAllRows<CommitteeRow>(SheetName.COMMITTEES),
+        this.repository.getAllRows<StudentDocumentRow>(
+          SheetName.STUDENT_DOCUMENTS,
+        ),
+        this.repository.getAllRows<LecturerDocumentRow>(
+          SheetName.LECTURER_DOCUMENTS,
+        ),
+      ]);
 
     let data = registrations.filter((registration) => {
       if (query.loai && registration.loai !== query.loai) {
@@ -315,10 +323,10 @@ export class RegistrationsService {
     }
 
     return {
-      data: await Promise.all(
-        data.map((registration) =>
-          this.enrichRegistrationWithWorkflow(registration),
-        ),
+      data: await this.enrichRegistrationsWithWorkflow(
+        data,
+        studentDocuments,
+        lecturerDocuments,
       ),
     };
   }
@@ -487,6 +495,44 @@ export class RegistrationsService {
     };
   }
 
+  private async enrichRegistrationsWithWorkflow(
+    registrations: RegistrationRow[],
+    studentDocuments?: StudentDocumentRow[],
+    lecturerDocuments?: LecturerDocumentRow[],
+  ) {
+    const resolvedStudentDocuments =
+      studentDocuments ??
+      (await this.repository.getAllRows<StudentDocumentRow>(
+        SheetName.STUDENT_DOCUMENTS,
+      ));
+    const resolvedLecturerDocuments =
+      lecturerDocuments ??
+      (await this.repository.getAllRows<LecturerDocumentRow>(
+        SheetName.LECTURER_DOCUMENTS,
+      ));
+
+    return Promise.all(
+      registrations.map(async (registration) => {
+        const enrichedRegistration =
+          await this.enrichRegistrationWithWorkflow(registration);
+        const registrationStudentDocuments = resolvedStudentDocuments.filter(
+          (document) => document.registrationId === registration.id,
+        );
+        const registrationLecturerDocuments = resolvedLecturerDocuments.filter(
+          (document) => document.registrationId === registration.id,
+        );
+
+        return {
+          ...enrichedRegistration,
+          documents: {
+            studentDocuments: registrationStudentDocuments,
+            lecturerDocuments: registrationLecturerDocuments,
+          },
+        };
+      }),
+    );
+  }
+
   async findOneById(id: string, user: AuthenticatedUser) {
     const registration = await this.getRegistrationOrThrow(id);
     await this.assertCanAccessRegistration(user, registration);
@@ -573,7 +619,7 @@ export class RegistrationsService {
       nextStatus,
       user.email,
       user.role,
-      'GVHD duyệt đăng ký',
+      'Sinh viên thục hiện BCTT',
     );
 
     await this.notificationsService.createNotification(

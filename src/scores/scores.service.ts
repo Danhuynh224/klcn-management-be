@@ -4,12 +4,14 @@ import { SheetName } from '../common/constants/sheet-definitions';
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { LecturerBusinessRole } from '../common/enums/lecturer-business-role.enum';
 import { RegistrationStatus } from '../common/enums/registration-status.enum';
+import { RegistrationType } from '../common/enums/registration-type.enum';
 import { SystemRole } from '../common/enums/system-role.enum';
 import { AppException } from '../common/exceptions/app.exception';
 import {
   CommitteeRow,
   RegistrationRow,
   ScoreRow,
+  UserRow,
 } from '../common/types/domain.types';
 import { toIsoNow } from '../common/utils/date.util';
 import { calculateAverage } from '../common/utils/score.util';
@@ -74,6 +76,7 @@ export class ScoresService {
       registration,
       payload.vaiTroCham,
       user.email,
+      Number(payload.totalScore),
     );
 
     return { data: score };
@@ -102,28 +105,43 @@ export class ScoresService {
   }
 
   async getByRegistration(registrationId: string) {
-    const scores = await this.repository.getAllRows<ScoreRow>(SheetName.SCORES);
+    const [scores, users] = await Promise.all([
+      this.repository.getAllRows<ScoreRow>(SheetName.SCORES),
+      this.repository.getAllRows<UserRow>(SheetName.USERS),
+    ]);
     const registrationScores = scores.filter(
       (score) => score.registrationId === registrationId,
     );
+    const enrichScore = (score: ScoreRow) => ({
+      ...score,
+      tenGV:
+        users.find((user) => user.email === score.emailGV)?.ten ??
+        score.emailGV,
+    });
 
     return {
       data: {
-        supervisor:
-          registrationScores.find(
+        supervisor: (() => {
+          const supervisor = registrationScores.find(
             (score) => score.vaiTroCham === LecturerBusinessRole.SUPERVISOR,
-          ) ?? null,
-        reviewer:
-          registrationScores.find(
+          );
+          return supervisor ? enrichScore(supervisor) : null;
+        })(),
+        reviewer: (() => {
+          const reviewer = registrationScores.find(
             (score) => score.vaiTroCham === LecturerBusinessRole.REVIEWER,
-          ) ?? null,
-        committee: registrationScores.filter((score) =>
-          [
-            LecturerBusinessRole.COMMITTEE_MEMBER,
-            LecturerBusinessRole.COMMITTEE_CHAIR,
-            LecturerBusinessRole.COMMITTEE_SECRETARY,
-          ].includes(score.vaiTroCham),
-        ),
+          );
+          return reviewer ? enrichScore(reviewer) : null;
+        })(),
+        committee: registrationScores
+          .filter((score) =>
+            [
+              LecturerBusinessRole.COMMITTEE_MEMBER,
+              LecturerBusinessRole.COMMITTEE_CHAIR,
+              LecturerBusinessRole.COMMITTEE_SECRETARY,
+            ].includes(score.vaiTroCham),
+          )
+          .map(enrichScore),
         final: {
           average: calculateAverage(
             registrationScores.map((score) => score.totalScore),
@@ -158,19 +176,20 @@ export class ScoresService {
     const finalScore = calculateAverage(
       registrationScores.map((score) => score.totalScore),
     );
+    const nextStatus = this.resolveFinalStatus(registration, finalScore);
 
     await this.repository.updateRow<RegistrationRow>(
       SheetName.REGISTRATIONS,
       registration.id,
       {
         finalScore,
-        status: RegistrationStatus.DEFENDED,
+        status: nextStatus,
         updatedAt: toIsoNow(),
       },
     );
     await this.registrationStatusHistoryService.append(
       registration.id,
-      RegistrationStatus.DEFENDED,
+      nextStatus,
       user.email,
       user.role,
       'Tổng hợp điểm và chốt trạng thái đã bảo vệ',
@@ -183,11 +202,57 @@ export class ScoresService {
     };
   }
 
+  private resolveFinalStatus(
+    registration: RegistrationRow,
+    finalScore: number,
+  ): RegistrationStatus {
+    if (registration.loai === RegistrationType.BCTT) {
+      return finalScore > 5
+        ? RegistrationStatus.BCTT_PASSED
+        : RegistrationStatus.BCTT_FAILED;
+    }
+
+    return finalScore > 5
+      ? RegistrationStatus.COMPLETED
+      : RegistrationStatus.REJECTED_AFTER_DEFENSE;
+  }
+
   private async updateRegistrationStatusAfterScoring(
     registration: RegistrationRow,
     role: LecturerBusinessRole,
     changedBy: string,
+    latestScore?: number,
   ) {
+    if (
+      registration.loai === RegistrationType.BCTT &&
+      role === LecturerBusinessRole.SUPERVISOR &&
+      typeof latestScore === 'number' &&
+      !Number.isNaN(latestScore)
+    ) {
+      const finalStatus =
+        latestScore > 5
+          ? RegistrationStatus.BCTT_PASSED
+          : RegistrationStatus.BCTT_FAILED;
+
+      await this.repository.updateRow<RegistrationRow>(
+        SheetName.REGISTRATIONS,
+        registration.id,
+        {
+          finalScore: latestScore,
+          status: finalStatus,
+          updatedAt: toIsoNow(),
+        },
+      );
+      await this.registrationStatusHistoryService.append(
+        registration.id,
+        finalStatus,
+        changedBy,
+        'LECTURER',
+        `Cham diem BCTT: ${latestScore} - ${latestScore > 5 ? 'pass' : 'fail'}`,
+      );
+      return;
+    }
+
     let status = registration.status;
 
     if (role === LecturerBusinessRole.SUPERVISOR && registration.emailGVPB) {

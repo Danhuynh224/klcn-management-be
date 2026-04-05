@@ -33,6 +33,23 @@ export class CommitteesService {
     };
   }
 
+  async findOne(id: string) {
+    const committee = await this.repository.findOne<CommitteeRow>(
+      SheetName.COMMITTEES,
+      (row) => row.id === id,
+    );
+
+    if (!committee) {
+      throw new AppException(
+        'Hội đồng không tồn tại',
+        HttpStatus.NOT_FOUND,
+        ErrorCode.RESOURCE_NOT_FOUND,
+      );
+    }
+
+    return { data: committee };
+  }
+
   async create(payload: CreateCommitteeDto) {
     const emails = [
       payload.chairEmail,

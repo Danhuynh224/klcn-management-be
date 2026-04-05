@@ -43,6 +43,7 @@ export class UsersService {
   }
 
   async findLecturers(
+    user: AuthenticatedUser,
     fieldName?: string,
     dot?: string,
     availableOnly?: boolean,
@@ -55,7 +56,20 @@ export class UsersService {
 
     return {
       data: users
-        .filter((user) => user.role === SystemRole.LECTURER)
+        .filter((candidate) => {
+          if (candidate.role !== SystemRole.LECTURER) {
+            return false;
+          }
+
+          if (
+            user.role === SystemRole.HEAD_OF_DEPARTMENT &&
+            candidate.major !== user.major
+          ) {
+            return false;
+          }
+
+          return true;
+        })
         .map((lecturer) => {
           const lecturerFields = fields
             .filter((field) => field.emailGV === lecturer.email)
