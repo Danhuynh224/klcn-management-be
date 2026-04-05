@@ -8,6 +8,6 @@ import { DocumentsService } from './documents.service';
   imports: [RegistrationsModule],
   controllers: [DocumentsController],
   providers: [DocumentsService, CloudinaryService],
-  exports: [DocumentsService],
+  exports: [DocumentsService, CloudinaryService],
 })
 export class DocumentsModule {}

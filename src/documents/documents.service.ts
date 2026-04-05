@@ -187,7 +187,13 @@ export class DocumentsService {
       document,
     );
 
+    const studentDocuments =
+      await this.repository.getAllRows<StudentDocumentRow>(
+        SheetName.STUDENT_DOCUMENTS,
+      );
     const nextStatus = this.resolveStatusAfterStudentUpload(
+      registration,
+      studentDocuments,
       registration.status,
       payload.documentType,
     );
@@ -206,7 +212,7 @@ export class DocumentsService {
         nextStatus,
         user.email,
         user.role,
-        `Đăng tải tài liệu: ${payload.documentType == StudentDocumentType.BCTT_REPORT ? 'Báo cáo thực tập' : payload.documentType == StudentDocumentType.INTERNSHIP_CONFIRMATION ? 'Xác nhận thực tập' : payload.documentType == StudentDocumentType.KLTN_REPORT ? 'Báo cáo khóa luận' : 'Tài liệu khác'}`,
+        `Đăng tải tài liệu: ${payload.documentType == StudentDocumentType.BCTT_REPORT ? 'Báo cáo thực tập' : payload.documentType == StudentDocumentType.INTERNSHIP_CONFIRMATION ? 'Phiếu xác nhận thực tập' : payload.documentType == StudentDocumentType.KLTN_REPORT ? 'Báo cáo khóa luận' : 'Tài liệu khác'}`,
       );
     }
 
@@ -377,6 +383,7 @@ export class DocumentsService {
         RegistrationStatus.KLTN_SUBMITTED,
         RegistrationStatus.WAITING_TURNITIN,
         RegistrationStatus.WAITING_SUPERVISOR_SCORE,
+        RegistrationStatus.DEFENSE_SCHEDULED,
       ].includes(registration.status)
     ) {
       return;
@@ -411,16 +418,35 @@ export class DocumentsService {
   }
 
   private resolveStatusAfterStudentUpload(
+    registration: RegistrationRow,
+    studentDocuments: StudentDocumentRow[],
     currentStatus: RegistrationStatus,
     documentType: StudentDocumentType,
   ) {
+    const uploadedDocumentTypes = new Set(
+      studentDocuments
+        .filter(
+          (document) =>
+            document.registrationId === registration.id &&
+            document.emailSV === registration.emailSV,
+        )
+        .map((document) => document.documentType),
+    );
+
     if (
       [
         StudentDocumentType.BCTT_REPORT,
         StudentDocumentType.INTERNSHIP_CONFIRMATION,
       ].includes(documentType)
     ) {
-      return RegistrationStatus.BCTT_SUBMITTED;
+      if (
+        uploadedDocumentTypes.has(StudentDocumentType.BCTT_REPORT) &&
+        uploadedDocumentTypes.has(StudentDocumentType.INTERNSHIP_CONFIRMATION)
+      ) {
+        return RegistrationStatus.BCTT_SUBMITTED;
+      }
+
+      return null;
     }
 
     if (documentType === StudentDocumentType.KLTN_REPORT) {
@@ -432,7 +458,9 @@ export class DocumentsService {
         StudentDocumentType.REVISED_THESIS,
         StudentDocumentType.REVISION_EXPLANATION,
       ].includes(documentType) &&
-      currentStatus === RegistrationStatus.WAITING_REVISED_UPLOAD
+      currentStatus === RegistrationStatus.WAITING_REVISED_UPLOAD &&
+      uploadedDocumentTypes.has(StudentDocumentType.REVISED_THESIS) &&
+      uploadedDocumentTypes.has(StudentDocumentType.REVISION_EXPLANATION)
     ) {
       return RegistrationStatus.WAITING_SUPERVISOR_REVISION_APPROVAL;
     }

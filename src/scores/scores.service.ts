@@ -2,7 +2,10 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { SHEET_REPOSITORY } from '../common/constants/injection-tokens';
 import { SheetName } from '../common/constants/sheet-definitions';
 import { ErrorCode } from '../common/enums/error-code.enum';
-import { LecturerBusinessRole } from '../common/enums/lecturer-business-role.enum';
+import {
+  getLecturerBusinessRoleLabel,
+  LecturerBusinessRole,
+} from '../common/enums/lecturer-business-role.enum';
 import { RegistrationStatus } from '../common/enums/registration-status.enum';
 import { RegistrationType } from '../common/enums/registration-type.enum';
 import { SystemRole } from '../common/enums/system-role.enum';
@@ -79,7 +82,7 @@ export class ScoresService {
       Number(payload.totalScore),
     );
 
-    return { data: score };
+    return { data: this.enrichScore(score) };
   }
 
   async update(id: string, user: AuthenticatedUser, payload: UpdateScoreDto) {
@@ -96,15 +99,24 @@ export class ScoresService {
       );
     }
 
-    return {
-      data: await this.repository.updateRow<ScoreRow>(SheetName.SCORES, id, {
+    const updatedScore = await this.repository.updateRow<ScoreRow>(
+      SheetName.SCORES,
+      id,
+      {
         ...payload,
         updatedAt: toIsoNow(),
-      }),
+      },
+    );
+
+    return {
+      data: this.enrichScore(updatedScore),
     };
   }
 
-  async getByRegistration(registrationId: string) {
+  async getByRegistration(registrationId: string, user: AuthenticatedUser) {
+    const registration = await this.getRegistrationOrThrow(registrationId);
+    await this.assertCanViewScores(user, registration);
+
     const [scores, users] = await Promise.all([
       this.repository.getAllRows<ScoreRow>(SheetName.SCORES),
       this.repository.getAllRows<UserRow>(SheetName.USERS),
@@ -112,12 +124,11 @@ export class ScoresService {
     const registrationScores = scores.filter(
       (score) => score.registrationId === registrationId,
     );
-    const enrichScore = (score: ScoreRow) => ({
-      ...score,
-      tenGV:
-        users.find((user) => user.email === score.emailGV)?.ten ??
-        score.emailGV,
-    });
+    const enrichScore = (score: ScoreRow) =>
+      this.enrichScore(
+        score,
+        users.find((user) => user.email === score.emailGV)?.ten,
+      );
 
     return {
       data: {
@@ -212,9 +223,15 @@ export class ScoresService {
         : RegistrationStatus.BCTT_FAILED;
     }
 
-    return finalScore > 5
-      ? RegistrationStatus.COMPLETED
-      : RegistrationStatus.REJECTED_AFTER_DEFENSE;
+    return RegistrationStatus.DEFENDED;
+  }
+
+  private enrichScore(score: ScoreRow, tenGV?: string) {
+    return {
+      ...score,
+      tenGV: tenGV ?? score.emailGV,
+      vaiTroChamLabel: getLecturerBusinessRoleLabel(score.vaiTroCham) ?? '',
+    };
   }
 
   private async updateRegistrationStatusAfterScoring(
@@ -253,12 +270,18 @@ export class ScoresService {
       return;
     }
 
-    let status = registration.status;
+    const currentStatus: RegistrationStatus = registration.status;
+    let status: RegistrationStatus = currentStatus;
 
     if (role === LecturerBusinessRole.SUPERVISOR && registration.emailGVPB) {
       status = RegistrationStatus.WAITING_REVIEWER_SCORE;
+    } else if (role === LecturerBusinessRole.REVIEWER) {
+      if (registration.committeeId) {
+        status = RegistrationStatus.WAITING_COMMITTEE_SCORE;
+      } else {
+        status = RegistrationStatus.WAITING_COMMITTEE_ASSIGNMENT;
+      }
     } else if (
-      role === LecturerBusinessRole.REVIEWER ||
       [
         LecturerBusinessRole.COMMITTEE_MEMBER,
         LecturerBusinessRole.COMMITTEE_CHAIR,
@@ -276,7 +299,7 @@ export class ScoresService {
         updatedAt: toIsoNow(),
       },
     );
-    if (status !== registration.status) {
+    if (status !== currentStatus) {
       await this.registrationStatusHistoryService.append(
         registration.id,
         status,
@@ -367,6 +390,49 @@ export class ScoresService {
 
     throw new AppException(
       'Bạn không được finalize điểm',
+      HttpStatus.FORBIDDEN,
+      ErrorCode.SCORE_NOT_ALLOWED,
+    );
+  }
+
+  private async assertCanViewScores(
+    user: AuthenticatedUser,
+    registration: RegistrationRow,
+  ) {
+    if ([SystemRole.ADMIN, SystemRole.HEAD_OF_DEPARTMENT].includes(user.role)) {
+      return;
+    }
+
+    if (
+      (user.role === SystemRole.STUDENT &&
+        registration.emailSV === user.email) ||
+      registration.emailGVHD === user.email ||
+      registration.emailGVPB === user.email
+    ) {
+      return;
+    }
+
+    if (user.role === SystemRole.LECTURER && registration.committeeId) {
+      const committee = await this.repository.findOne<CommitteeRow>(
+        SheetName.COMMITTEES,
+        (row) => row.id === registration.committeeId,
+      );
+
+      if (
+        committee &&
+        [
+          committee.chairEmail,
+          committee.secretaryEmail,
+          committee.member1Email,
+          committee.member2Email,
+        ].includes(user.email)
+      ) {
+        return;
+      }
+    }
+
+    throw new AppException(
+      'Bạn không được xem điểm của registration này',
       HttpStatus.FORBIDDEN,
       ErrorCode.SCORE_NOT_ALLOWED,
     );

@@ -115,6 +115,7 @@ export class CommitteesService {
         RegistrationStatus.WAITING_TURNITIN,
         RegistrationStatus.WAITING_SUPERVISOR_SCORE,
         RegistrationStatus.WAITING_REVIEWER_SCORE,
+        RegistrationStatus.WAITING_COMMITTEE_ASSIGNMENT,
       ].includes(registration.status)
     ) {
       throw new AppException(
@@ -131,13 +132,13 @@ export class CommitteesService {
         committeeId: committee.id,
         defenseDate: committee.defenseDate,
         location: committee.location,
-        status: RegistrationStatus.DEFENSE_SCHEDULED,
+        status: RegistrationStatus.WAITING_COMMITTEE_SCORE,
         updatedAt: toIsoNow(),
       },
     );
     await this.registrationStatusHistoryService.append(
       registration.id,
-      RegistrationStatus.DEFENSE_SCHEDULED,
+      RegistrationStatus.WAITING_COMMITTEE_SCORE,
       committee.chairEmail,
       'HEAD_OF_DEPARTMENT',
       `Phân vào hội đồng ${committee.committeeName}`,

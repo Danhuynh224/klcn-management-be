@@ -29,6 +29,20 @@ export class CloudinaryService {
     file: Express.Multer.File,
     folder: string,
   ): Promise<UploadApiResponse> {
+    return this.uploadBuffer(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      folder,
+    );
+  }
+
+  async uploadBuffer(
+    buffer: Buffer,
+    fileName: string,
+    mimeType: string,
+    folder: string,
+  ): Promise<UploadApiResponse> {
     if (!this.isConfigured) {
       console.error('Cloudinary is not configured', {
         hasCloudName: Boolean(process.env.CLOUDINARY_CLOUD_NAME),
@@ -51,8 +65,8 @@ export class CloudinaryService {
           public_id: createId('doc'),
           use_filename: false,
           unique_filename: true,
-          filename_override: file.originalname,
-          format: extname(file.originalname).replace('.', '') || undefined,
+          filename_override: fileName,
+          format: extname(fileName).replace('.', '') || undefined,
         },
         (error, result) => {
           if (error || !result) {
@@ -67,9 +81,9 @@ export class CloudinaryService {
               httpCode: cloudinaryError?.http_code ?? null,
               name: cloudinaryError?.name ?? null,
               folder,
-              originalName: file.originalname,
-              mimetype: file.mimetype,
-              size: file.size,
+              originalName: fileName,
+              mimetype: mimeType,
+              size: buffer.length,
             });
 
             reject(
@@ -86,7 +100,7 @@ export class CloudinaryService {
         },
       );
 
-      upload.end(file.buffer);
+      upload.end(buffer);
     });
   }
 }

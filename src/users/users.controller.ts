@@ -39,7 +39,12 @@ export class UsersController {
   @ApiQuery({ name: 'fieldName', required: false })
   @ApiQuery({ name: 'dot', required: false })
   @ApiQuery({ name: 'availableOnly', required: false, example: 'true' })
-  @Roles(SystemRole.ADMIN, SystemRole.HEAD_OF_DEPARTMENT, SystemRole.LECTURER)
+  @Roles(
+    SystemRole.ADMIN,
+    SystemRole.HEAD_OF_DEPARTMENT,
+    SystemRole.LECTURER,
+    SystemRole.STUDENT,
+  )
   @Get('lecturers')
   findLecturers(
     @CurrentUser() user: AuthenticatedUser,

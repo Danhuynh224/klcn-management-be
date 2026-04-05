@@ -1,4 +1,4 @@
-export enum RegistrationStatus {
+﻿export enum RegistrationStatus {
   NEW = 'NEW',
   BCTT_PENDING_APPROVAL = 'BCTT_PENDING_APPROVAL',
   BCTT_APPROVED = 'BCTT_APPROVED',
@@ -15,6 +15,7 @@ export enum RegistrationStatus {
   WAITING_TURNITIN = 'WAITING_TURNITIN',
   WAITING_SUPERVISOR_SCORE = 'WAITING_SUPERVISOR_SCORE',
   WAITING_REVIEWER_SCORE = 'WAITING_REVIEWER_SCORE',
+  WAITING_COMMITTEE_ASSIGNMENT = 'WAITING_COMMITTEE_ASSIGNMENT',
   WAITING_COMMITTEE_SCORE = 'WAITING_COMMITTEE_SCORE',
   DEFENSE_SCHEDULED = 'DEFENSE_SCHEDULED',
   DEFENDED = 'DEFENDED',
@@ -46,6 +47,8 @@ export const REGISTRATION_STATUS_LABELS: Record<RegistrationStatus, string> = {
     'Chờ giảng viên hướng dẫn chấm điểm',
   [RegistrationStatus.WAITING_REVIEWER_SCORE]:
     'Chờ giảng viên phản biện chấm điểm',
+  [RegistrationStatus.WAITING_COMMITTEE_ASSIGNMENT]:
+    'Chờ phân công hội đồng',
   [RegistrationStatus.WAITING_COMMITTEE_SCORE]: 'Chờ hội đồng chấm điểm',
   [RegistrationStatus.DEFENSE_SCHEDULED]: 'Đã xếp lịch bảo vệ',
   [RegistrationStatus.DEFENDED]: 'Đã bảo vệ',

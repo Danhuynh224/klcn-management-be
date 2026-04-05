@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+﻿import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { SHEET_REPOSITORY } from '../common/constants/injection-tokens';
 import { SheetName } from '../common/constants/sheet-definitions';
 import {
@@ -8,6 +8,7 @@ import {
 import { ErrorCode } from '../common/enums/error-code.enum';
 import { AppException } from '../common/exceptions/app.exception';
 import { RegistrationStatusHistoryRow } from '../common/types/domain.types';
+import { successResponse } from '../common/utils/api-response.util';
 import { toIsoNow } from '../common/utils/date.util';
 import { createId } from '../common/utils/id.util';
 import type { SheetRepository } from '../common/types/sheet-repository.interface';
@@ -50,11 +51,20 @@ export class RegistrationStatusHistoryService {
       SheetName.REGISTRATION_STATUS_HISTORY,
     );
 
-    return {
-      data: rows
-        .filter((row) => row.registrationId === registrationId)
-        .sort((left, right) => left.changedAt.localeCompare(right.changedAt)),
-    };
+    const data = rows
+      .filter((row) => row.registrationId === registrationId)
+      .sort((left, right) => left.changedAt.localeCompare(right.changedAt))
+      .map((row) => ({
+        id: row.id,
+        registrationId: row.registrationId,
+        status: row.status,
+        changedBy: row.changedBy,
+        changedByRole: row.changedByRole,
+        note: row.note,
+        changedAt: row.changedAt,
+      }));
+
+    return successResponse(data);
   }
 
   async getLatestByRegistrationId(registrationId: string) {

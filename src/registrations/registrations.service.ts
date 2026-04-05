@@ -199,7 +199,9 @@ export class RegistrationsService {
     if (user.role === SystemRole.STUDENT) {
       return {
         data: await this.enrichRegistrationsWithWorkflow(
-          registrations.filter((registration) => registration.emailSV === user.email),
+          registrations.filter(
+            (registration) => registration.emailSV === user.email,
+          ),
           studentDocuments,
           lecturerDocuments,
         ),
@@ -752,7 +754,7 @@ export class RegistrationsService {
         SheetName.STUDENT_DOCUMENTS,
       );
 
-    this.assertStatusTransitionAllowed(
+    await this.assertStatusTransitionAllowed(
       user,
       registration,
       payload.status,
@@ -780,9 +782,8 @@ export class RegistrationsService {
       payload.status,
       user.email,
       user.role,
-      'Cập nhật trạng thái đăng ký',
+      'Cập nhật trạng thái',
     );
-
     return { data: await this.enrichRegistrationWithWorkflow(updated) };
   }
 
@@ -1002,7 +1003,7 @@ export class RegistrationsService {
     ].filter(Boolean);
   }
 
-  private assertStatusTransitionAllowed(
+  private async assertStatusTransitionAllowed(
     user: AuthenticatedUser,
     registration: RegistrationRow,
     nextStatus: RegistrationStatus,
@@ -1077,6 +1078,36 @@ export class RegistrationsService {
 
     if ([SystemRole.ADMIN, SystemRole.HEAD_OF_DEPARTMENT].includes(user.role)) {
       if (nextStatus === RegistrationStatus.DEFENDED) {
+        return;
+      }
+
+      if (
+        registration.status === RegistrationStatus.DEFENDED &&
+        [
+          RegistrationStatus.WAITING_REVISED_UPLOAD,
+          RegistrationStatus.COMPLETED,
+          RegistrationStatus.REJECTED_AFTER_DEFENSE,
+        ].includes(nextStatus)
+      ) {
+        return;
+      }
+    }
+
+    if (user.role === SystemRole.LECTURER && registration.committeeId) {
+      const committee = await this.repository.findOne<CommitteeRow>(
+        SheetName.COMMITTEES,
+        (row) => row.id === registration.committeeId,
+      );
+
+      if (
+        committee?.secretaryEmail === user.email &&
+        registration.status === RegistrationStatus.DEFENDED &&
+        [
+          RegistrationStatus.WAITING_REVISED_UPLOAD,
+          RegistrationStatus.COMPLETED,
+          RegistrationStatus.REJECTED_AFTER_DEFENSE,
+        ].includes(nextStatus)
+      ) {
         return;
       }
     }

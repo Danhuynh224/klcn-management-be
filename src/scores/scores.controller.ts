@@ -41,8 +41,11 @@ export class ScoresController {
   @ApiOperation({ summary: 'Get scores by registration id' })
   @ApiParam({ name: 'registrationId' })
   @Get('registration/:registrationId')
-  getByRegistration(@Param('registrationId') registrationId: string) {
-    return this.scoresService.getByRegistration(registrationId);
+  getByRegistration(
+    @Param('registrationId') registrationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.scoresService.getByRegistration(registrationId, user);
   }
 
   @ApiOperation({ summary: 'Finalize final score for a registration' })
