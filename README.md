@@ -1,98 +1,227 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Thesis Management Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend API cho hệ thống quản lý quy trình BCTT/KLTN. Dự án hỗ trợ đăng nhập theo vai trò, quản lý đợt đăng ký, lĩnh vực, chỉ tiêu giảng viên, đăng ký đề tài, tài liệu nộp, chấm điểm, hội đồng, biên bản, thông báo và dashboard.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tính năng chính
 
-## Description
+- Xác thực bằng JWT và phân quyền theo vai trò `STUDENT`, `LECTURER`, `HEAD_OF_DEPARTMENT`, `ADMIN`.
+- Quản lý quy trình đăng ký BCTT/KLTN, trạng thái xử lý và lịch sử đổi trạng thái.
+- Quản lý người dùng, giảng viên, sinh viên, lĩnh vực hướng dẫn, chỉ tiêu theo đợt.
+- Upload tài liệu sinh viên/giảng viên lên Cloudinary.
+- Quản lý điểm, tính điểm tổng kết, hội đồng bảo vệ và biên bản.
+- Đồng bộ dữ liệu qua Google Sheets, có file mẫu ban đầu tại `data/klcn-management.xlsx`.
+- Chuẩn hóa response, validation DTO, exception filter và Swagger UI.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Công nghệ sử dụng
 
-## Project setup
+- Node.js
+- NestJS 11
+- TypeScript
+- Google Sheets API (`googleapis`)
+- Cloudinary
+- JWT, Passport JWT
+- Multer
+- PDFKit
+- XLSX
+- Swagger/OpenAPI
+- Jest, Supertest
+- ESLint, Prettier
 
-```bash
-$ npm install
+## Cấu trúc thư mục
+
+```text
+src/
+  auth/              Xác thực, JWT strategy, login/me
+  users/             API người dùng, giảng viên, sinh viên
+  excel/             Repository thao tác Google Sheets
+  registrations/     Quy trình đăng ký BCTT/KLTN
+  documents/         Upload và truy xuất tài liệu
+  scores/            Nhập điểm, cập nhật điểm, finalize điểm
+  committees/        Hội đồng và phân công đăng ký vào hội đồng
+  minutes/           Biên bản bảo vệ
+  notifications/     Thông báo người dùng
+  dashboards/        Dashboard theo vai trò
+  terms/             Đợt đăng ký
+  quotas/            Chỉ tiêu giảng viên
+  fields/            Lĩnh vực hướng dẫn
+  common/            Guard, decorator, filter, interceptor, enum, util
+docs/
+  api-reference.md   Tài liệu API dạng markdown
+data/
+  klcn-management.xlsx File dữ liệu mẫu để bootstrap Google Sheets
 ```
 
-## Compile and run the project
+## Yêu cầu
+
+- Node.js 20 trở lên được khuyến nghị.
+- npm.
+- Google Cloud service account có quyền truy cập Google Sheets.
+- Cloudinary account nếu cần upload tài liệu.
+
+## Cài đặt
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+Tạo file `.env` từ file mẫu:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
 ```
 
-## Deployment
+Trên Windows PowerShell có thể dùng:
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+```powershell
+Copy-Item .env.example .env
+```
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Cấu hình môi trường
+
+Các biến môi trường chính:
+
+```env
+PORT=3000
+GOOGLE_SHEET_ID=
+GOOGLE_SERVICE_ACCOUNT_EMAIL=
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n"
+JWT_SECRET=klcn-demo-secret
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CORS_ALLOW_ALL=false
+CORS_ORIGINS=http://localhost:5174,http://127.0.0.1:5174
+```
+
+Ghi chú:
+
+- `GOOGLE_SHEET_ID` là ID của spreadsheet dùng làm nơi lưu dữ liệu.
+- `GOOGLE_SERVICE_ACCOUNT_EMAIL` và `GOOGLE_PRIVATE_KEY` lấy từ Google service account.
+- Cần chia sẻ spreadsheet cho email service account với quyền chỉnh sửa.
+- Khi khởi động, service sẽ kiểm tra và tạo/cập nhật các sheet cần thiết. Một số sheet có thể được import dữ liệu mẫu từ `data/klcn-management.xlsx`.
+- Nếu chưa cấu hình Cloudinary, các API upload tài liệu sẽ trả lỗi cấu hình.
+
+## Chạy dự án
+
+Chạy môi trường development:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Chạy bình thường:
 
-## Resources
+```bash
+npm run start
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Build production:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+npm run build
+```
 
-## Support
+Chạy bản đã build:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+npm run start:prod
+```
 
-## Stay in touch
+Mặc định API chạy tại:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```text
+http://localhost:3000
+```
 
-## License
+Swagger UI:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```text
+http://localhost:3000/docs
+```
+
+Health check:
+
+```text
+GET /
+```
+
+## Tài khoản và xác thực
+
+Đăng nhập:
+
+```text
+POST /auth/login
+```
+
+Body mẫu:
+
+```json
+{
+  "email": "23124045@student.hcmute.edu.vn",
+  "password": "123456"
+}
+```
+
+Các endpoint bảo vệ yêu cầu header:
+
+```text
+Authorization: Bearer <accessToken>
+```
+
+Mật khẩu mặc định khi dữ liệu mẫu không có password là `123456`.
+
+## API chính
+
+- `auth`: đăng nhập, lấy thông tin người dùng hiện tại.
+- `users`: danh sách người dùng, giảng viên, sinh viên.
+- `terms`: quản lý đợt đăng ký.
+- `quotas`: quản lý chỉ tiêu giảng viên.
+- `fields`: quản lý lĩnh vực và đề tài gợi ý.
+- `registrations`: đăng ký BCTT/KLTN, duyệt/từ chối, đổi giảng viên, cập nhật trạng thái.
+- `documents`: upload và xem tài liệu theo đăng ký.
+- `scores`: nhập điểm, cập nhật điểm, tính điểm tổng kết.
+- `committees`: tạo hội đồng, cập nhật hội đồng, phân công đăng ký.
+- `minutes`: tạo và cập nhật biên bản.
+- `notifications`: xem và đánh dấu thông báo đã đọc.
+- `dashboards`: thống kê theo sinh viên, giảng viên, trưởng bộ môn/admin.
+
+Xem chi tiết request/response tại [docs/api-reference.md](docs/api-reference.md) hoặc Swagger UI `/docs`.
+
+## Kiểm tra chất lượng code
+
+Format:
+
+```bash
+npm run format
+```
+
+Lint:
+
+```bash
+npm run lint
+```
+
+Chạy unit test:
+
+```bash
+npm run test
+```
+
+Chạy e2e test:
+
+```bash
+npm run test:e2e
+```
+
+Coverage:
+
+```bash
+npm run test:cov
+```
+
+## Ghi chú triển khai
+
+- Build output nằm trong thư mục `dist/`.
+- Production nên đặt `JWT_SECRET` đủ mạnh và không dùng secret mặc định.
+- Cấu hình `CORS_ORIGINS` theo domain frontend thật.
+- Không commit file `.env`, credentials Google hoặc secret Cloudinary.
